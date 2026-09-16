@@ -1,5 +1,5 @@
 /**
- * livedesk.js  v1.1.1
+ * livedesk.js  v1.2.0-coco
  * Config YAML:
  *   type: custom:live-desk
  *   name: Anh Long          # tên hiển thị trong lời chào
@@ -372,17 +372,14 @@ const I18N = {
   }
 };
 
-// Detect locale: from config, or from localStorage, default vi
-function _getLang(config) {
-  try { const s = localStorage.getItem('nep_lang'); if (s) return s; } catch(e){}
-  return (config && config.lang) || 'vi';
-}
+// Coco is an English-only fork. Keep the helper so older code paths remain
+// compatible, but always select the English strings.
+function _getLang() { return 'en'; }
 function _t(config, key, ...args) {
-  const lang = _getLang(config);
-  const dict = I18N[lang] || I18N['vi'];
+  const dict = I18N.en;
   const val  = dict[key];
   if (typeof val === 'function') return val(...args);
-  return val !== undefined ? val : (I18N['vi'][key] || key);
+  return val !== undefined ? val : key;
 }
 
 // ─── English sensor reactions ─────────────────────────────────
@@ -425,6 +422,9 @@ const ALERT_MSGS_EN = {
     on:['Door opened! Who is coming in? 🚪','The door is open — remember to close it so mosquitoes don\'t get in!',
         'Hmm, the door opened? Nobody told {c}~'],
     off:['Door closed, all safe now~ 🔒','Door closed! {c} feels relieved~']
+  },
+  doorbell:{
+    on:['Someone rang the front doorbell. 🔔','Ben, someone is at the front door. 🔔']
   },
   smoke:{
     on:['⚠️ SMOKE DETECTED! Check immediately! 🔥🚨','🚨 SMOKE ALERT! Evacuate now, don\'t hesitate!',
@@ -754,6 +754,7 @@ const FLOAT_CSS = `
 const CARD_TEMPLATE = `
 <style>
   :host{display:block;}
+  :host([data-layout="fullscreen"]){min-height:calc(100vh - 112px);}
 
   /* Card: transparent, rounded, blur=1 */
   .nep-card{
@@ -765,6 +766,113 @@ const CARD_TEMPLATE = `
     font-family:'Segoe UI',sans-serif;
     box-shadow:0 8px 32px rgba(31,38,135,0.18);
     padding:0;
+  }
+
+  /* Coco full-dashboard layout. Classic mode keeps the original card intact. */
+  .coco-header,.coco-dashboard{display:none;}
+  .coco-character-panel{min-width:0;}
+  .nep-card.is-fullscreen{
+    min-height:calc(100vh - 112px);
+    color:var(--primary-text-color,#fff);
+    background:
+      radial-gradient(circle at 16% 12%,rgba(35,156,214,.16),transparent 34%),
+      var(--primary-background-color,#101214);
+    border:1px solid var(--divider-color,rgba(255,255,255,.12));
+    border-radius:16px;
+    box-shadow:none;
+    overflow:hidden;
+  }
+  .nep-card.is-fullscreen .nep-card-inner{
+    display:grid;
+    grid-template-columns:minmax(300px,.8fr) minmax(460px,1.35fr);
+    grid-template-rows:auto minmax(0,1fr);
+    gap:14px;
+    min-height:calc(100vh - 112px);
+    padding:16px;
+    border-radius:0;
+  }
+  .nep-card.is-fullscreen .coco-header{
+    grid-column:1/-1;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    min-height:54px;
+    padding:0 58px 0 6px;
+  }
+  .coco-brand{display:flex;align-items:center;gap:11px;min-width:0;}
+  .coco-brand-mark{
+    display:grid;place-items:center;width:38px;height:38px;border-radius:12px;
+    background:linear-gradient(145deg,#14a9e8,#7568ff);font-size:21px;
+    box-shadow:0 8px 22px rgba(20,169,232,.22);
+  }
+  .coco-title{font-size:22px;font-weight:700;letter-spacing:.2px;}
+  .coco-subtitle{color:var(--secondary-text-color,#aab0b6);font-size:12px;margin-top:2px;}
+  .coco-clock{text-align:right;font-size:20px;font-weight:650;font-variant-numeric:tabular-nums;}
+  .coco-date{font-size:11px;color:var(--secondary-text-color,#aab0b6);font-weight:500;margin-top:2px;}
+  .nep-card.is-fullscreen .coco-character-panel{
+    display:flex;flex-direction:column;min-height:0;
+    background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.02));
+    border:1px solid var(--divider-color,rgba(255,255,255,.12));
+    border-radius:14px;overflow:hidden;
+  }
+  .nep-card.is-fullscreen .waifu-area{flex:1;min-height:500px;}
+  .nep-card.is-fullscreen .nep-toolbar{background:rgba(0,0,0,.18);}
+  .nep-card.is-fullscreen .coco-dashboard{
+    display:grid;grid-template-rows:auto auto minmax(150px,1fr);gap:12px;min-width:0;
+  }
+  .coco-panel{
+    background:var(--card-background-color,#1c1c1c);
+    border:1px solid var(--divider-color,rgba(255,255,255,.12));
+    border-radius:14px;padding:14px;min-width:0;
+  }
+  .coco-panel-title{
+    display:flex;align-items:center;justify-content:space-between;gap:8px;
+    font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.65px;
+    color:var(--secondary-text-color,#aab0b6);margin-bottom:10px;
+  }
+  .coco-priority{
+    padding:4px 8px;border-radius:999px;background:rgba(43,187,115,.14);
+    color:#55d991;font-size:10px;font-weight:800;letter-spacing:.5px;
+  }
+  .coco-priority.attention{background:rgba(255,181,45,.14);color:#ffc45f;}
+  .coco-priority.security,.coco-priority.critical{background:rgba(255,82,82,.15);color:#ff7b7b;}
+  .coco-message{font-size:17px;line-height:1.42;font-weight:600;min-height:48px;}
+  .coco-facts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:12px;}
+  .coco-fact{padding:9px 10px;border-radius:10px;background:rgba(255,255,255,.045);min-width:0;}
+  .coco-fact-label{font-size:10px;color:var(--secondary-text-color,#aab0b6);text-transform:uppercase;letter-spacing:.45px;}
+  .coco-fact-value{font-size:14px;font-weight:700;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .coco-cameras{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .coco-camera{
+    position:relative;aspect-ratio:16/9;border-radius:11px;overflow:hidden;
+    background:#090b0d;cursor:pointer;border:1px solid rgba(255,255,255,.08);
+  }
+  .coco-camera img{width:100%;height:100%;display:block;object-fit:cover;}
+  .coco-camera-empty{display:grid;place-items:center;width:100%;height:100%;color:var(--secondary-text-color,#8f969d);font-size:12px;text-align:center;padding:20px;}
+  .coco-camera-label{
+    position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:space-between;gap:8px;
+    padding:18px 10px 8px;background:linear-gradient(transparent,rgba(0,0,0,.82));
+    color:#fff;font-size:12px;font-weight:700;pointer-events:none;
+  }
+  .coco-live{color:#55d991;font-size:10px;text-transform:uppercase;letter-spacing:.5px;}
+  .coco-events{display:flex;flex-direction:column;min-height:0;}
+  #coco-event-list{display:flex;flex-direction:column;gap:7px;overflow:auto;min-height:0;}
+  .coco-event{display:grid;grid-template-columns:62px 9px 1fr;gap:8px;align-items:start;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.055);}
+  .coco-event:last-child{border-bottom:0;}
+  .coco-event-time{font-size:11px;color:var(--secondary-text-color,#aab0b6);font-variant-numeric:tabular-nums;}
+  .coco-event-dot{width:7px;height:7px;border-radius:50%;background:#32b8ef;margin-top:4px;}
+  .coco-event-dot.attention{background:#ffc45f}.coco-event-dot.security,.coco-event-dot.critical{background:#ff6262}
+  .coco-event-title{font-size:12px;font-weight:700;}.coco-event-message{font-size:11px;color:var(--secondary-text-color,#aab0b6);margin-top:2px;line-height:1.35;}
+  .coco-empty{font-size:12px;color:var(--secondary-text-color,#aab0b6);padding:10px 0;}
+  @media(max-width:900px){
+    :host([data-layout="fullscreen"]),.nep-card.is-fullscreen{min-height:auto;}
+    .nep-card.is-fullscreen .nep-card-inner{grid-template-columns:1fr;min-height:auto;padding:10px;}
+    .nep-card.is-fullscreen .coco-header{padding-right:50px;}
+    .nep-card.is-fullscreen .waifu-area{min-height:440px;}
+    .coco-dashboard{grid-template-rows:auto auto auto!important;}
+  }
+  @media(max-width:600px){
+    .coco-cameras{grid-template-columns:1fr}.coco-facts{grid-template-columns:1fr 1fr}
+    .coco-title{font-size:18px}.coco-message{font-size:15px}
   }
 
   /* Inner wrapper keeps overflow:hidden for waifu + toolbar */
@@ -1028,18 +1136,47 @@ const CARD_TEMPLATE = `
     </button>
   </div>
   <div class="nep-card-inner">
-  <div class="waifu-area" id="waifuArea">
-    <div id="nep-bubble-wrap"><div id="nep-bubble"></div></div>
-    <iframe id="nep-l2d-frame" scrolling="no" allowtransparency="true"></iframe>
-    <span class="model-label" id="modelLabel"></span>
-  </div>
-  <div class="nep-toolbar">
-    <button class="nep-btn" id="btnSwitchPrev">◀ Prev</button>
-    <button class="nep-btn" id="btnSwitchNext">▶ Next</button>
-    <button class="nep-btn" id="btnQuote">💬 Talk</button>
-    <button class="nep-btn" id="btnSound">🔊 TTS</button>
-    <button class="nep-btn" id="btnSensors">🔄 Reload</button>
-  </div>
+  <header class="coco-header">
+    <div class="coco-brand"><div class="coco-brand-mark">◈</div><div><div class="coco-title">Coco Home</div><div class="coco-subtitle" id="coco-subtitle">Home Assistant companion</div></div></div>
+    <div class="coco-clock" id="coco-clock">--:--<div class="coco-date" id="coco-date"></div></div>
+  </header>
+  <section class="coco-character-panel">
+    <div class="waifu-area" id="waifuArea">
+      <div id="nep-bubble-wrap"><div id="nep-bubble"></div></div>
+      <iframe id="nep-l2d-frame" scrolling="no" allowtransparency="true"></iframe>
+      <span class="model-label" id="modelLabel"></span>
+    </div>
+    <div class="nep-toolbar">
+      <button class="nep-btn" id="btnSwitchPrev">◀ Prev</button>
+      <button class="nep-btn" id="btnSwitchNext">▶ Next</button>
+      <button class="nep-btn" id="btnQuote">💬 Talk</button>
+      <button class="nep-btn" id="btnSound">🔊 TTS</button>
+      <button class="nep-btn" id="btnSensors">🔄 Reload</button>
+    </div>
+  </section>
+  <main class="coco-dashboard">
+    <section class="coco-panel">
+      <div class="coco-panel-title"><span>Coco status</span><span class="coco-priority" id="coco-priority">Normal</span></div>
+      <div class="coco-message" id="coco-message">Coco is getting the house status ready…</div>
+      <div class="coco-facts">
+        <div class="coco-fact"><div class="coco-fact-label">Security</div><div class="coco-fact-value" id="coco-security">Checking…</div></div>
+        <div class="coco-fact"><div class="coco-fact-label">Weather</div><div class="coco-fact-value" id="coco-weather">—</div></div>
+        <div class="coco-fact"><div class="coco-fact-label">Temperature</div><div class="coco-fact-value" id="coco-temperature">—</div></div>
+        <div class="coco-fact"><div class="coco-fact-label">Humidity</div><div class="coco-fact-value" id="coco-humidity">—</div></div>
+      </div>
+    </section>
+    <section class="coco-panel">
+      <div class="coco-panel-title"><span>Camera watch</span><span>Tap a camera for details</span></div>
+      <div class="coco-cameras">
+        <div class="coco-camera" id="coco-front-camera" data-camera-key="front_door_camera"><div class="coco-camera-empty">Add a front-door camera in the card settings</div><div class="coco-camera-label"><span>Front Door</span><span class="coco-live">Live</span></div></div>
+        <div class="coco-camera" id="coco-car-camera" data-camera-key="car_camera"><div class="coco-camera-empty">Add a car-view camera in the card settings</div><div class="coco-camera-label"><span>Car View</span><span class="coco-live">Live</span></div></div>
+      </div>
+    </section>
+    <section class="coco-panel coco-events">
+      <div class="coco-panel-title"><span>Recent events</span><span id="coco-event-count">0</span></div>
+      <div id="coco-event-list"><div class="coco-empty">No events recorded yet.</div></div>
+    </section>
+  </main>
   </div>
 </div>
 `;
@@ -1078,17 +1215,27 @@ class LiveDesk extends HTMLElement {
     this._modelSounds  = [];     // list of sound URLs fetched from model.json
     this._ttsUtter     = null;   // current SpeechSynthesisUtterance
     this._audioEnabled = true;   // audio enable/disable toggle
+    this._currentMessage = '';
+    this._eventHistory = (() => {
+      try { return JSON.parse(localStorage.getItem('coco_event_history') || '[]').slice(0, 20); }
+      catch(e) { return []; }
+    })();
+    this._clockInterval = null;
+    this._cameraRefreshTimer = null;
   }
 
-  setConfig(config) { this._config = config; this._render(); }
+  setConfig(config) { this._config = { ...config, lang: 'en' }; this._render(); }
 
-  set hass(hass) { this._hass = hass; this._updateSensors(); }
+  set hass(hass) { this._hass = hass; this._updateSensors(); this._updateDashboard(); }
 
-  getCardSize() { return 5; }
+  getCardSize() { return this._config.layout === 'fullscreen' ? 12 : 5; }
 
   // ── _render ──────────────────────────────────────────────────
   _render() {
     this._shadow.innerHTML = CARD_TEMPLATE;
+    const isFullscreen = this._config.layout === 'fullscreen';
+    this.setAttribute('data-layout', isFullscreen ? 'fullscreen' : 'card');
+    this._shadow.getElementById('nepCard')?.classList.toggle('is-fullscreen', isFullscreen);
     // Apply i18n labels
     const _tCard = (k, ...a) => _t(this._config, k, ...a);
     this._shadow.getElementById('btnSwitchPrev').textContent = _tCard('btnPrev');
@@ -1102,8 +1249,8 @@ class LiveDesk extends HTMLElement {
     if (lblMini) lblMini.textContent = _tCard('winMini');
     if (lblPin)  lblPin.textContent  = _tCard('winPin');
     if (lblHide) lblHide.textContent = _tCard('winHide');
-    const h = this._config.height || 440;
-    const w = this._config.width  || 400; // fix: use config instead of hardcode
+    const h = isFullscreen ? Math.max(Number(this._config.height) || 620, 520) : (this._config.height || 440);
+    const w = isFullscreen ? Math.max(Number(this._config.width) || 520, 420) : (this._config.width || 400);
     this._shadow.querySelector('.waifu-area').style.height = h + 'px';
 
     // Apply card_blur — always runs, inline style wins over CSS class
@@ -1116,8 +1263,13 @@ class LiveDesk extends HTMLElement {
         _card.style.setProperty('backdropFilter',       'blur(' + _blur + 'px)');
         _card.style.setProperty('-webkit-backdrop-filter', 'blur(' + _blur + 'px)');
         _card.style.setProperty('backdrop-filter',      'blur(' + _blur + 'px)');
-        _card.style.background = 'rgba(255,255,255,' + _bgAlpha + ')';
-        _card.style.border     = '1px solid rgba(255,255,255,' + _borderAlpha + ')';
+        if (isFullscreen) {
+          _card.style.background = 'radial-gradient(circle at 16% 12%,rgba(35,156,214,.16),transparent 34%),var(--primary-background-color,#101214)';
+          _card.style.border = '1px solid var(--divider-color,rgba(255,255,255,.12))';
+        } else {
+          _card.style.background = 'rgba(255,255,255,' + _bgAlpha + ')';
+          _card.style.border = '1px solid rgba(255,255,255,' + _borderAlpha + ')';
+        }
       }
     }
 
@@ -1127,6 +1279,8 @@ class LiveDesk extends HTMLElement {
     // Start with natural size; auto-clip fires after model renders via postMessage
     frame.style.cssText = 'width:100%;height:' + h + 'px;border:none;background:transparent;display:block;z-index:2;transition:margin-top 0.3s ease;';
     this._loadIntoFrame(frame, this._modelIdx, w, h, false);
+    this._bindDashboard();
+    this._updateDashboard(true);
 
     this._shadow.getElementById('btnSwitchPrev').onclick = () => this._switchModelPrev();
     this._shadow.getElementById('btnSwitchNext').onclick = () => this._switchModel();
@@ -1211,6 +1365,208 @@ class LiveDesk extends HTMLElement {
       };
       window.addEventListener('message', this._msgListener);
     }
+  }
+
+  _cocoConfig() {
+    const nested = this._config.coco || {};
+    return {
+      message_entity: this._config.message_entity || nested.message_entity,
+      priority_entity: this._config.priority_entity || nested.priority_entity,
+      event_entity: this._config.event_entity || nested.event_entity,
+    };
+  }
+
+  _bindDashboard() {
+    if (this._clockInterval) clearInterval(this._clockInterval);
+    if (this._cameraRefreshTimer) clearInterval(this._cameraRefreshTimer);
+    this._clockInterval = null;
+    this._cameraRefreshTimer = null;
+
+    const tick = () => {
+      const now = new Date();
+      const clock = this._shadow.getElementById('coco-clock');
+      const date = this._shadow.getElementById('coco-date');
+      if (clock) {
+        const timeText = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+        clock.firstChild.textContent = timeText;
+      }
+      if (date) date.textContent = now.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+    };
+    tick();
+
+    this._shadow.querySelectorAll('[data-camera-key]').forEach(el => {
+      el.addEventListener('click', () => {
+        const entityId = this._config[el.dataset.cameraKey];
+        if (!entityId) return;
+        this.dispatchEvent(new CustomEvent('hass-more-info', {
+          detail: { entityId }, bubbles: true, composed: true
+        }));
+      });
+    });
+
+    if (this._config.layout === 'fullscreen') {
+      this._clockInterval = setInterval(tick, 30000);
+      this._cameraRefreshTimer = setInterval(() => this._updateCameraViews(true), 30000);
+    }
+  }
+
+  _cleanState(entityId) {
+    if (!entityId || !this._hass) return null;
+    const state = this._hass.states[entityId];
+    if (!state || ['unknown', 'unavailable', 'none', ''].includes(String(state.state).toLowerCase())) return null;
+    return state;
+  }
+
+  _formatEntity(entityId, fallback = '—') {
+    const state = this._cleanState(entityId);
+    if (!state) return fallback;
+    const unit = state.attributes?.unit_of_measurement || '';
+    return `${state.state}${unit ? ` ${unit}` : ''}`;
+  }
+
+  _normalisePriority(value) {
+    const p = String(value || 'normal').toLowerCase();
+    if (['critical', 'security', 'attention', 'activity', 'info', 'normal'].includes(p)) return p;
+    return 'normal';
+  }
+
+  _recordEvent(title, message, priority = 'activity', camera = '') {
+    const cleanTitle = String(title || 'Home event').trim();
+    const cleanMessage = String(message || '').trim();
+    if (!cleanMessage) return;
+    const previous = this._eventHistory[0];
+    if (previous && previous.title === cleanTitle && previous.message === cleanMessage && Date.now() - previous.timestamp < 5000) return;
+    this._eventHistory.unshift({
+      title: cleanTitle,
+      message: cleanMessage,
+      priority: this._normalisePriority(priority),
+      camera,
+      timestamp: Date.now(),
+    });
+    this._eventHistory = this._eventHistory.slice(0, 20);
+    try { localStorage.setItem('coco_event_history', JSON.stringify(this._eventHistory)); } catch(e) {}
+    this._renderEventHistory();
+  }
+
+  _renderEventHistory() {
+    const list = this._shadow?.getElementById('coco-event-list');
+    const count = this._shadow?.getElementById('coco-event-count');
+    if (count) count.textContent = String(this._eventHistory.length);
+    if (!list) return;
+    list.replaceChildren();
+    if (!this._eventHistory.length) {
+      const empty = document.createElement('div');
+      empty.className = 'coco-empty';
+      empty.textContent = 'No events recorded yet.';
+      list.appendChild(empty);
+      return;
+    }
+    this._eventHistory.slice(0, 10).forEach(item => {
+      const row = document.createElement('div');
+      row.className = 'coco-event';
+      const time = document.createElement('div');
+      time.className = 'coco-event-time';
+      time.textContent = new Date(item.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+      const dot = document.createElement('div');
+      dot.className = `coco-event-dot ${this._normalisePriority(item.priority)}`;
+      const copy = document.createElement('div');
+      const title = document.createElement('div');
+      title.className = 'coco-event-title';
+      title.textContent = item.title;
+      const message = document.createElement('div');
+      message.className = 'coco-event-message';
+      message.textContent = item.message;
+      copy.append(title, message);
+      row.append(time, dot, copy);
+      if (item.camera) {
+        row.style.cursor = 'pointer';
+        row.addEventListener('click', () => this.dispatchEvent(new CustomEvent('hass-more-info', {
+          detail: { entityId: item.camera }, bubbles: true, composed: true
+        })));
+      }
+      list.appendChild(row);
+    });
+  }
+
+  _cameraUrl(entityId, refresh = false) {
+    const state = this._cleanState(entityId);
+    if (!state || !this._hass) return '';
+    const picture = state.attributes?.entity_picture;
+    let url = picture ? this._hass.hassUrl(picture) : this._hass.hassUrl(`/api/camera_proxy/${entityId}`);
+    if (refresh) url += `${url.includes('?') ? '&' : '?'}coco_ts=${Date.now()}`;
+    return url;
+  }
+
+  _setCameraView(elementId, entityId, refresh) {
+    const holder = this._shadow?.getElementById(elementId);
+    if (!holder) return;
+    const oldImage = holder.querySelector('img');
+    const url = this._cameraUrl(entityId, refresh);
+    if (!url) {
+      if (oldImage) oldImage.remove();
+      return;
+    }
+    if (oldImage && !refresh) return;
+    const image = oldImage || document.createElement('img');
+    image.alt = this._hass?.states[entityId]?.attributes?.friendly_name || entityId;
+    image.loading = 'eager';
+    image.src = url;
+    if (!oldImage) holder.prepend(image);
+    holder.querySelector('.coco-camera-empty')?.remove();
+  }
+
+  _updateCameraViews(refresh = false) {
+    this._setCameraView('coco-front-camera', this._config.front_door_camera, refresh);
+    this._setCameraView('coco-car-camera', this._config.car_camera, refresh);
+  }
+
+  _updateDashboard(forceCamera = false) {
+    if (!this._shadow) return;
+    const coco = this._cocoConfig();
+    const messageState = this._cleanState(coco.message_entity);
+    const priorityState = this._cleanState(coco.priority_entity);
+    const eventState = this._cleanState(coco.event_entity);
+    const message = messageState?.state || this._currentMessage || this._statusMsgs[this._statusIdx] || 'Everything is quiet. Coco is watching the house.';
+    const priority = this._normalisePriority(priorityState?.state || 'normal');
+
+    if (messageState) {
+      const previous = this._lastStates[coco.message_entity];
+      if (previous !== undefined && previous !== messageState.state) {
+        const title = eventState?.state || messageState.attributes?.friendly_name || 'Coco update';
+        this._recordEvent(title, messageState.state, priority);
+        this._pushStatus(messageState.state, true);
+      }
+      this._lastStates[coco.message_entity] = messageState.state;
+    }
+
+    const messageEl = this._shadow.getElementById('coco-message');
+    if (messageEl) messageEl.textContent = String(message).replace(/<[^>]*>/g, '');
+    const priorityEl = this._shadow.getElementById('coco-priority');
+    if (priorityEl) {
+      priorityEl.textContent = priority.charAt(0).toUpperCase() + priority.slice(1);
+      priorityEl.className = `coco-priority ${priority}`;
+    }
+
+    const door = this._cleanState(this._config.door_sensor)?.state;
+    const smoke = this._cleanState(this._config.smoke_sensor)?.state;
+    const motion = this._cleanState(this._config.motion_sensor)?.state;
+    let security = 'All clear';
+    if (smoke === 'on') security = 'Smoke alert';
+    else if (door === 'on') security = 'Door open';
+    else if (motion === 'on') security = 'Motion detected';
+    const securityEl = this._shadow.getElementById('coco-security');
+    if (securityEl) securityEl.textContent = security;
+    const weatherEl = this._shadow.getElementById('coco-weather');
+    if (weatherEl) weatherEl.textContent = this._cleanState(this._config.weather_entity)?.state?.replace(/-/g, ' ') || '—';
+    const tempEl = this._shadow.getElementById('coco-temperature');
+    if (tempEl) tempEl.textContent = this._formatEntity(this._config.temp_sensor);
+    const humidEl = this._shadow.getElementById('coco-humidity');
+    if (humidEl) humidEl.textContent = this._formatEntity(this._config.humid_sensor);
+    const subtitle = this._shadow.getElementById('coco-subtitle');
+    if (subtitle) subtitle.textContent = `${this._cn()} is connected to Home Assistant`;
+
+    this._renderEventHistory();
+    this._updateCameraViews(forceCamera);
   }
 
   // ── Load model into iframe ────────────────────────────────────
@@ -1492,6 +1848,10 @@ class LiveDesk extends HTMLElement {
     wrap.classList.remove('show');
     setTimeout(() => {
       b.innerHTML = html;
+      this._currentMessage = String(html).replace(/<[^>]*>/g, '');
+      const dashboardMessage = this._shadow.getElementById('coco-message');
+      const externalMessage = this._cleanState(this._cocoConfig().message_entity);
+      if (dashboardMessage && !externalMessage) dashboardMessage.textContent = this._currentMessage;
       wrap.classList.add('show');
       // Play audio when bubble appears (only if sound file present; TTS skips idle to avoid spam)
       const m = MODELS[this._modelIdx];
@@ -2284,8 +2644,8 @@ class LiveDesk extends HTMLElement {
     }
 
     // Alert sensors
-    let alertMsg = null, alertMs = 4000;
-    const AM = _getLang(this._config) === 'en' ? ALERT_MSGS_EN : ALERT_MSGS;
+    let alertMsg = null, alertMs = 4000, alertTitle = '', alertPriority = 'activity', alertCamera = '';
+    const AM = ALERT_MSGS_EN;
     const alertTtsEnabled = cfg.alert_tts_enabled !== false; // default true if not set
 
     // ── Door sensor ──────────────────────────────────────────────
@@ -2293,7 +2653,7 @@ class LiveDesk extends HTMLElement {
       const s   = this._hass.states[cfg.door_sensor];
       const cur = s?.state;
       const prv = this._lastStates[cfg.door_sensor];
-      if (cur !== prv) {
+      if (prv !== undefined && cur !== prv) {
         // State genuinely changed
         const on = cur === 'on';
         if (on) {
@@ -2302,11 +2662,30 @@ class LiveDesk extends HTMLElement {
           this._welcomeFired    = false;           // ← reset: allow one welcome
           this._motionWasOnAtDoor = this._hass.states[cfg.motion_sensor]?.state === 'on';
           alertMsg = this._rand(AM.door.on).replace('{c}', this._cn());
+          alertTitle = 'Front door';
+          alertPriority = 'attention';
+          alertCamera = cfg.front_door_camera || '';
         } else {
           // Door closed → clear window
           this._doorOpenedAt = null;
           this._welcomeFired = false;
+          this._recordEvent('Front door', 'The front door was closed.', 'info', cfg.front_door_camera || '');
         }
+      }
+    }
+
+    // ── Doorbell sensor (separate from a physical door contact) ──
+    if (cfg.doorbell_sensor) {
+      const s = this._hass.states[cfg.doorbell_sensor];
+      const cur = s?.state;
+      const prv = this._lastStates[cfg.doorbell_sensor];
+      const active = ['on', 'pressed', 'detected'].includes(String(cur).toLowerCase());
+      if (prv !== undefined && cur !== prv && active) {
+        alertMsg = this._rand(AM.doorbell.on).replace('{c}', this._cn()).replace('{n}', this._ownerName());
+        alertMs = 7000;
+        alertTitle = 'Front doorbell';
+        alertPriority = 'attention';
+        alertCamera = cfg.front_door_camera || '';
       }
     }
 
@@ -2315,7 +2694,7 @@ class LiveDesk extends HTMLElement {
       const s   = this._hass.states[cfg.motion_sensor];
       const cur = s?.state;
       const prv = this._lastStates[cfg.motion_sensor];
-      if (cur !== prv) {
+      if (prv !== undefined && cur !== prv) {
         const on = cur === 'on';
         if (on) {
           const now        = Date.now();
@@ -2338,6 +2717,9 @@ class LiveDesk extends HTMLElement {
             // Normal motion alert (no door context)
             alertMsg = this._rand(AM.motion.on).replace('{c}', this._cn());
             alertMs  = 5000;
+            alertTitle = 'Front door motion';
+            alertPriority = 'activity';
+            alertCamera = cfg.front_door_camera || cfg.car_camera || '';
           }
           // else: inside door window but too early or already fired → silent
         } else {
@@ -2350,9 +2732,12 @@ class LiveDesk extends HTMLElement {
       const s   = this._hass.states[cfg.smoke_sensor];
       const cur = s?.state;
       const prv = this._lastStates[cfg.smoke_sensor];
-      if (cur !== prv) {
+      if (prv !== undefined && cur !== prv) {
         const on = cur === 'on';
-        if (on) { alertMsg = this._rand(AM.smoke.on).replace('{c}', this._cn()); alertMs = 8000; }
+        if (on) {
+          alertMsg = this._rand(AM.smoke.on).replace('{c}', this._cn()); alertMs = 8000;
+          alertTitle = 'Smoke alarm'; alertPriority = 'critical';
+        }
         else    { alertMsg = this._rand(AM.smoke.off).replace('{c}', this._cn()); }
       }
     }
@@ -2361,6 +2746,7 @@ class LiveDesk extends HTMLElement {
     this._saveStates();
 
     if (alertMsg) {
+      if (alertTitle) this._recordEvent(alertTitle, alertMsg, alertPriority, alertCamera);
       if (this._floating) this._floatTip(alertMsg, alertMs);
       else this._pushStatus(alertMsg, true);
       if (alertTtsEnabled) {
@@ -2374,12 +2760,13 @@ class LiveDesk extends HTMLElement {
       this._statusMsgs = msgs;
       // Do not reset idx to avoid bubble jitter
     }
+    this._updateDashboard();
   }
 
   _changed(id, val) { return this._lastStates[id] !== val; }
   _saveStates() {
     if (!this._hass) return;
-    ['temp_sensor','humid_sensor','weather_entity','motion_sensor','door_sensor','smoke_sensor']
+    ['temp_sensor','humid_sensor','weather_entity','motion_sensor','door_sensor','doorbell_sensor','smoke_sensor']
       .forEach(k => {
         const id = this._config[k];
         if (id && this._hass.states[id]) this._lastStates[id] = this._hass.states[id].state;
@@ -2388,6 +2775,7 @@ class LiveDesk extends HTMLElement {
 
   // ── Welcome: dance animation + popup + TTS ────────────────────
   _triggerWelcome(msg) {
+    this._recordEvent('Welcome home', msg, 'info');
     // 1. Show bubble message
     if (this._floating) this._floatTip(msg, 6000);
     else this._pushStatus(msg, true);
@@ -2473,7 +2861,7 @@ class LiveDesk extends HTMLElement {
 
   // Helper: trả về tên chủ nhà theo ngôn ngữ hiện tại
   _ownerName() {
-    return this._config.name || (_getLang(this._config) === 'en' ? 'you' : 'bạn');
+    return this._config.name || 'you';
   }
 
   _rand(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
@@ -2506,8 +2894,7 @@ class LiveDesk extends HTMLElement {
   // Return parsed TTS config from YAML
   _getTtsCfg() {
     const raw   = this._config.tts;
-    const isEN  = _getLang(this._config) === 'en';
-    const defLang = isEN ? 'en-US' : 'vi-VN';
+    const defLang = 'en-GB';
     if (!raw) return { engine: 'webspeech', lang: defLang, rate: 1.05, pitch: 1.2 };
     if (typeof raw === 'string') return { engine: raw };  // tts: none
     return {
@@ -3017,6 +3404,8 @@ class LiveDesk extends HTMLElement {
     }
     if (this._idleInterval)   { clearInterval(this._idleInterval);   this._idleInterval   = null; }
     if (this._statusInterval) { clearInterval(this._statusInterval); this._statusInterval = null; }
+    if (this._clockInterval) { clearInterval(this._clockInterval); this._clockInterval = null; }
+    if (this._cameraRefreshTimer) { clearInterval(this._cameraRefreshTimer); this._cameraRefreshTimer = null; }
     if (this._floatChatInterval) { clearInterval(this._floatChatInterval); this._floatChatInterval = null; }
     if (this._floatMouseMove) {
       document.removeEventListener('mousemove', this._floatMouseMove);
@@ -3047,7 +3436,7 @@ class LiveDeskEditor extends HTMLElement {
     this._config = {};
     this._hass   = null;
     // accordion open states
-    this._open = { general: true, appearance: false, sensors: false, alerts: false, devices: false, tts: false };
+    this._open = { dashboard: true, general: false, appearance: false, sensors: false, alerts: false, devices: false, tts: false };
   }
 
   set hass(h) { this._hass = h; this._syncPickers(); }
@@ -3120,11 +3509,10 @@ class LiveDeskEditor extends HTMLElement {
 
   _render() {
     const cfg    = this._config;
-    const lang   = _getLang(cfg);
     const t      = (k, ...a) => _t(cfg, k, ...a);
     const blur   = cfg.card_blur !== undefined ? cfg.card_blur : 0;
     const ttsEng = (cfg.tts && cfg.tts.engine) || 'webspeech';
-    const ttsLang  = (cfg.tts && cfg.tts.lang)  || 'vi-VN';
+    const ttsLang  = (cfg.tts && cfg.tts.lang)  || 'en-GB';
     const ttsRate  = (cfg.tts && cfg.tts.rate)  || 1.05;
     const ttsPitch = (cfg.tts && cfg.tts.pitch) || 1.2;
     const ttsSvc   = (cfg.tts && cfg.tts.service)   || '';
@@ -3181,16 +3569,33 @@ class LiveDeskEditor extends HTMLElement {
 
     <!-- HEADER -->
     <div style="text-align:center;padding:12px 14px 4px;font-size:11px;color:var(--secondary-text-color);line-height:1.7;">
-      💜 <strong style="color:var(--primary-color)">LiveDesk v1.0.2</strong> — Live2D Waifu Dashboard<br/>
-      Designed by <strong style="color:var(--primary-color)">@doanlong1412</strong> from 🇻🇳 Vietnam
+      ◈ <strong style="color:var(--primary-color)">Coco LiveDesk v1.2.0</strong> — Home Assistant companion<br/>
+      Based on LiveDesk by <strong style="color:var(--primary-color)">@doanlong1412</strong>
     </div>
 
-    <!-- Language switcher -->
-    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 14px 4px;gap:8px">
-      <span style="font-size:12px;font-weight:600;color:var(--secondary-text-color)">${t('lblInterfaceLang')}</span>
-      <div class="bg" style="gap:4px">
-        <div class="ob ${lang === 'vi' ? 'on' : ''}" id="langVI" style="min-width:80px">🇻🇳 Tiếng Việt</div>
-        <div class="ob ${lang === 'en' ? 'on' : ''}" id="langEN" style="min-width:80px">🇬🇧 English</div>
+    <!-- ══ COCO DASHBOARD ══ -->
+    <div class="acc-wrap">
+      <div class="acc-head" id="head-dashboard">
+        <span>◈ Coco Dashboard</span>
+        <span class="acc-arrow" id="arrow-dashboard">${this._open.dashboard ? '▾' : '▸'}</span>
+      </div>
+      <div class="acc-body" id="body-dashboard" style="display:${this._open.dashboard ? 'block' : 'none'}">
+        <div class="row">
+          <label>Layout</label>
+          <div class="bg">
+            <div class="ob ${(cfg.layout || 'card') === 'card' ? 'on' : ''}" data-layout="card">Classic card</div>
+            <div class="ob ${cfg.layout === 'fullscreen' ? 'on' : ''}" data-layout="fullscreen">Full dashboard</div>
+          </div>
+          <div class="hint">For the full dashboard, place this card in a Home Assistant Panel view.</div>
+        </div>
+        <div class="row"><label>Front-door camera</label><ha-entity-picker data-key="front_door_camera" data-domain="camera" allow-custom-entity></ha-entity-picker></div>
+        <div class="row"><label>Car-view camera</label><ha-entity-picker data-key="car_camera" data-domain="camera" allow-custom-entity></ha-entity-picker></div>
+        <div class="divider"></div>
+        <div class="tag">AI result inputs (optional)</div>
+        <div class="hint" style="margin-bottom:10px">Home Assistant or Ollama can update these entities later. Coco will show the result and add it to Recent Events.</div>
+        <div class="row"><label>Latest Coco message entity</label><ha-entity-picker data-key="message_entity" allow-custom-entity></ha-entity-picker></div>
+        <div class="row"><label>Priority entity</label><ha-entity-picker data-key="priority_entity" allow-custom-entity></ha-entity-picker></div>
+        <div class="row"><label>Event title entity</label><ha-entity-picker data-key="event_entity" allow-custom-entity></ha-entity-picker></div>
       </div>
     </div>
 
@@ -3292,8 +3697,8 @@ class LiveDeskEditor extends HTMLElement {
     <div class="acc-wrap">
       <div class="acc-head" id="head-alerts">
         <span>${t('secAlerts')}
-          ${[cfg.motion_sensor, cfg.door_sensor, cfg.smoke_sensor].filter(Boolean).length > 0
-            ? `<span class="badge">${[cfg.motion_sensor, cfg.door_sensor, cfg.smoke_sensor].filter(Boolean).length}/3</span>`
+          ${[cfg.motion_sensor, cfg.door_sensor, cfg.doorbell_sensor, cfg.smoke_sensor].filter(Boolean).length > 0
+            ? `<span class="badge">${[cfg.motion_sensor, cfg.door_sensor, cfg.doorbell_sensor, cfg.smoke_sensor].filter(Boolean).length}/4</span>`
             : ''}
         </span>
         <span class="acc-arrow" id="arrow-alerts">${this._open.alerts ? '▾' : '▸'}</span>
@@ -3319,6 +3724,11 @@ class LiveDeskEditor extends HTMLElement {
         <div class="row">
           <label>${t('lblDoorSensor')}</label>
           <ha-entity-picker data-key="door_sensor" data-domain="binary_sensor" allow-custom-entity></ha-entity-picker>
+        </div>
+        <div class="row">
+          <label>🔔 Doorbell / ding sensor</label>
+          <ha-entity-picker data-key="doorbell_sensor" data-domain="binary_sensor" allow-custom-entity></ha-entity-picker>
+          <div class="hint">This is separate from the physical open/closed door sensor.</div>
         </div>
         <div class="row">
           <label>${t('lblSmokeSensor')}</label>
@@ -3404,7 +3814,7 @@ class LiveDeskEditor extends HTMLElement {
             <div class="sl-row">
               <label>${t('lblWSLang')}</label>
               <div class="bg" style="flex:1">
-                ${[['vi-VN','🇻🇳 VI'],['en-US','🇺🇸 EN'],['ja-JP','🇯🇵 JP'],['zh-CN','🇨🇳 ZH']].map(
+                ${[['en-GB','🇬🇧 English (UK)'],['en-US','🇺🇸 English (US)']].map(
                   ([v,l]) => `<div class="ob ${ttsLang === v ? 'on' : ''}" data-tts-lang="${v}">${l}</div>`
                 ).join('')}
               </div>
@@ -3430,7 +3840,7 @@ class LiveDeskEditor extends HTMLElement {
             <div class="row" style="margin-bottom:0">
               <label>${t('lblGTLang')}</label>
               <div class="bg">
-                ${[['vi','🇻🇳 vi'],['en','🇺🇸 en'],['ja','🇯🇵 ja'],['zh-CN','🇨🇳 zh']].map(
+                ${[['en-GB','🇬🇧 en-GB'],['en','🇺🇸 en']].map(
                   ([v,l]) => `<div class="ob ${(cfg.tts && cfg.tts.lang) === v ? 'on' : ''}" data-tts-lang="${v}">${l}</div>`
                 ).join('')}
               </div>
@@ -3472,23 +3882,17 @@ class LiveDeskEditor extends HTMLElement {
     </div>`;
 
     // ── Accordion toggles ────────────────────────────────────────
-    ['general', 'appearance', 'sensors', 'alerts', 'devices', 'tts'].forEach(id => {
+    ['dashboard', 'general', 'appearance', 'sensors', 'alerts', 'devices', 'tts'].forEach(id => {
       const h = this.shadowRoot.getElementById('head-' + id);
       if (h) h.addEventListener('click', () => this._toggle(id));
     });
 
-    // ── Language switcher ────────────────────────────────────────
-    const langVI = this.shadowRoot.getElementById('langVI');
-    const langEN = this.shadowRoot.getElementById('langEN');
-    if (langVI) langVI.addEventListener('click', () => {
-      try { localStorage.setItem('nep_lang', 'vi'); } catch(e){}
-      const c = { ...this._config, lang: 'vi' };
-      this._config = c; this._fire(); this._render();
-    });
-    if (langEN) langEN.addEventListener('click', () => {
-      try { localStorage.setItem('nep_lang', 'en'); } catch(e){}
-      const c = { ...this._config, lang: 'en' };
-      this._config = c; this._fire(); this._render();
+    // ── Layout selector ───────────────────────────────────────────
+    this.shadowRoot.querySelectorAll('[data-layout]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this._config = { ...this._config, layout: btn.dataset.layout, lang: 'en' };
+        this._fire(); this._render();
+      });
     });
 
     // ── Owner name ───────────────────────────────────────────────
@@ -3705,16 +4109,20 @@ LiveDesk.getStubConfig = function() {
   return {
     type: 'custom:live-desk',
     name: '',
+    char_nickname: 'Coco',
+    layout: 'fullscreen',
+    lang: 'en',
     temp_sensor:    'sensor.temperature',
     humid_sensor:   'sensor.humidity',
     weather_entity: 'weather.home',
+    tts: { engine: 'webspeech', lang: 'en-GB', rate: 1.05, pitch: 1.1 },
   };
 };
 
 window.customCards = window.customCards || [];
 window.customCards.push({
   type: 'live-desk',
-  name: 'LiveDesk',
-  description: 'LiveDesk — Live2D waifu dashboard, smart bubbles, flexible TTS',
+  name: 'Coco LiveDesk',
+  description: 'English Live2D Home Assistant companion with fullscreen dashboard, cameras and events',
   preview: true,
 });

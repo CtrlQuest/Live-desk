@@ -1,3 +1,14 @@
+# v1.2.0-coco
+
+- Added a responsive `layout: fullscreen` Coco Home dashboard while keeping the classic card mode.
+- Added separate motion, physical door, doorbell and smoke sensor handling.
+- Added front-door and car-view camera panels using Home Assistant camera entities.
+- Added security, weather, temperature and humidity status tiles.
+- Added local Recent Events history with camera detail links.
+- Added optional AI message, event title and priority entity inputs for future Home Assistant/Ollama workflows.
+- Changed the active interface and default voice language to English only.
+- Replaced Vietnamese documentation with English Coco setup guidance while retaining original attribution and licence.
+
 # Changelog
 
 All notable changes to LiveDesk will be documented here.

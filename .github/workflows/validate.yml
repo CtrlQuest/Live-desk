@@ -2,7 +2,7 @@ name: Validate HACS
 
 on:
   push:
-    branches: [main, master]
+    branches: [main, master, coco-dev]
   pull_request:
     branches: [main, master]
   schedule:
@@ -14,6 +14,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Check JavaScript syntax
+        run: node --check livedesk.js
 
       - name: HACS validation
         uses: hacs/action@main

@@ -23,18 +23,18 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          name: LiveDesk ${{ steps.tag.outputs.version }}
+          name: Coco LiveDesk ${{ steps.tag.outputs.version }}
           body: |
-            ## LiveDesk ${{ steps.tag.outputs.version }}
+            ## Coco LiveDesk ${{ steps.tag.outputs.version }}
 
-            ### Cài đặt qua HACS
-            Xem hướng dẫn trong [README](https://github.com/${{ github.repository }}#-cài-đặt).
+            ### Install through HACS
+            See the [README](https://github.com/${{ github.repository }}#installation-for-testing) for setup instructions.
 
-            ### Cài đặt thủ công
-            1. Tải file `livedesk.js` từ Assets bên dưới
-            2. Copy vào `/config/www/livedesk.js`
-            3. Thêm resource: `/local/livedesk.js` (JavaScript module)
-            4. Hard reload trình duyệt (`Ctrl+Shift+R`)
+            ### Manual installation
+            1. Download `livedesk.js` from the assets below.
+            2. Copy it to `/config/www/livedesk.js`.
+            3. Add `/local/livedesk.js` as a JavaScript module resource.
+            4. Hard reload the browser with `Ctrl+Shift+R`.
           files: livedesk.js
           draft: false
           prerelease: false
