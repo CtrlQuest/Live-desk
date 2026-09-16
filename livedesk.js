@@ -1,5 +1,5 @@
 /**
- * livedesk.js  v1.2.2-coco
+ * livedesk.js  v1.2.3-coco
  * Config YAML:
  *   type: custom:live-desk
  *   name: Anh Long          # tên hiển thị trong lời chào
@@ -581,7 +581,7 @@ function makeL2dHtml(modelPath, w, h, vOffset, scale, background) {
 <style>
 *{margin:0;padding:0}
 html,body{width:${w}px;height:${h}px;overflow:hidden;background:${background};}
-canvas{display:block;position:absolute;top:0;left:0;background:${background};}
+canvas{display:block;position:absolute;top:0;left:0;background:transparent!important;}
 </style>
 </head><body>
 <canvas id="live2d" width="${w}" height="${h}"></canvas>
@@ -3640,7 +3640,7 @@ class LiveDeskEditor extends HTMLElement {
 
     <!-- HEADER -->
     <div style="text-align:center;padding:12px 14px 4px;font-size:11px;color:var(--secondary-text-color);line-height:1.7;">
-      ◈ <strong style="color:var(--primary-color)">Coco LiveDesk v1.2.2</strong> — Home Assistant companion<br/>
+      ◈ <strong style="color:var(--primary-color)">Coco LiveDesk v1.2.3</strong> — Home Assistant companion<br/>
       Based on LiveDesk by <strong style="color:var(--primary-color)">@doanlong1412</strong>
     </div>
 

@@ -1,3 +1,7 @@
+# v1.2.3-coco
+
+- Restored the Live2D canvas transparency so character models render correctly over the new dark model background.
+
 # v1.2.2-coco
 
 - Replaced the bright white Live2D iframe background with a dark background matching the Coco dashboard.
