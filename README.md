@@ -1,7 +1,7 @@
 # Coco LiveDesk
 
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
-![version](https://img.shields.io/badge/version-1.2.0--coco-blue)
+![version](https://img.shields.io/badge/version-1.2.1--coco-blue)
 ![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2023.1+-green)
 ![license](https://img.shields.io/badge/license-MIT-lightgrey)
 
@@ -55,9 +55,12 @@ temp_sensor: sensor.downstairs_temperature
 humid_sensor: sensor.downstairs_humidity
 weather_entity: weather.forecast_home
 
-motion_sensor: binary_sensor.front_door_motion_2
+front_door_motion_entity: event.front_door_motion
 door_sensor: binary_sensor.front_door_door
-doorbell_sensor: binary_sensor.front_door_ding_2
+doorbell_entity: event.front_door_ding
+
+# Add this after ONVIF exposes a C510W motion/person binary sensor:
+# car_motion_entity: binary_sensor.tapo_c510w_motion_alarm
 
 front_door_camera: camera.front_door_live_view
 car_camera: camera.tapo_c510w_live_view
@@ -106,9 +109,10 @@ coco:
 | `temp_sensor` | none | Temperature sensor |
 | `humid_sensor` | none | Humidity sensor |
 | `weather_entity` | none | Weather entity |
-| `motion_sensor` | none | Motion binary sensor |
+| `front_door_motion_entity` | none | Front-door motion event entity or binary sensor |
+| `car_motion_entity` | none | Car-view motion/person event entity or binary sensor |
 | `door_sensor` | none | Physical open/closed door binary sensor |
-| `doorbell_sensor` | none | Doorbell/ding binary sensor |
+| `doorbell_entity` | none | Doorbell/ding event entity or binary sensor |
 | `smoke_sensor` | none | Smoke/fire binary sensor |
 | `front_door_camera` | none | Camera shown in the Front Door panel |
 | `car_camera` | none | Camera shown in the Car View panel |
@@ -138,6 +142,8 @@ Other supported engines are `google_translate`, `ha_service`, and `none`.
 - Coco LiveDesk does not send camera images to an AI service.
 - Vision analysis will be added later as a Home Assistant/Ollama workflow, with explicit camera selection and fallback alerts.
 - Do not expose an unauthenticated Ollama server to the internet.
+
+The legacy `motion_sensor`, `car_motion_sensor`, and `doorbell_sensor` keys remain supported for existing configurations.
 
 ## Credits and licence
 

@@ -1,3 +1,10 @@
+# v1.2.1-coco
+
+- Added Home Assistant `event.*` support for Ring motion and doorbell events.
+- Added separate front-door and car-view motion inputs.
+- Added ONVIF-ready motion/person sensor support for the C510W car view.
+- Kept the original motion and doorbell configuration keys as backwards-compatible aliases.
+
 # v1.2.0-coco
 
 - Added a responsive `layout: fullscreen` Coco Home dashboard while keeping the classic card mode.

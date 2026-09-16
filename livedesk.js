@@ -1,5 +1,5 @@
 /**
- * livedesk.js  v1.2.0-coco
+ * livedesk.js  v1.2.1-coco
  * Config YAML:
  *   type: custom:live-desk
  *   name: Anh Long          # tên hiển thị trong lời chào
@@ -1417,6 +1417,33 @@ class LiveDesk extends HTMLElement {
     return state;
   }
 
+  _frontDoorMotionEntity() {
+    return this._config.front_door_motion_entity || this._config.motion_sensor || '';
+  }
+
+  _carMotionEntity() {
+    return this._config.car_motion_entity || this._config.car_motion_sensor || '';
+  }
+
+  _doorbellEntity() {
+    return this._config.doorbell_entity || this._config.doorbell_sensor || '';
+  }
+
+  _isActiveAlertState(value) {
+    return ['on', 'open', 'pressed', 'detected', 'motion', 'active'].includes(String(value || '').toLowerCase());
+  }
+
+  _entityTriggered(entityId) {
+    if (!entityId || !this._hass?.states[entityId]) return false;
+    const current = this._hass.states[entityId].state;
+    const previous = this._lastStates[entityId];
+    if (previous === undefined || current === previous) return false;
+    // Home Assistant event entities use their last-fired timestamp as state.
+    // Any subsequent state change therefore represents a new event.
+    if (entityId.startsWith('event.')) return true;
+    return this._isActiveAlertState(current);
+  }
+
   _formatEntity(entityId, fallback = '—') {
     const state = this._cleanState(entityId);
     if (!state) return fallback;
@@ -1549,11 +1576,13 @@ class LiveDesk extends HTMLElement {
 
     const door = this._cleanState(this._config.door_sensor)?.state;
     const smoke = this._cleanState(this._config.smoke_sensor)?.state;
-    const motion = this._cleanState(this._config.motion_sensor)?.state;
+    const frontMotion = this._cleanState(this._frontDoorMotionEntity())?.state;
+    const carMotion = this._cleanState(this._carMotionEntity())?.state;
     let security = 'All clear';
     if (smoke === 'on') security = 'Smoke alert';
     else if (door === 'on') security = 'Door open';
-    else if (motion === 'on') security = 'Motion detected';
+    else if (this._isActiveAlertState(frontMotion)) security = 'Front-door motion';
+    else if (this._isActiveAlertState(carMotion)) security = 'Car-view motion';
     const securityEl = this._shadow.getElementById('coco-security');
     if (securityEl) securityEl.textContent = security;
     const weatherEl = this._shadow.getElementById('coco-weather');
@@ -2660,7 +2689,7 @@ class LiveDesk extends HTMLElement {
           // Door just opened → arm welcome window, reset fired flag
           this._doorOpenedAt    = Date.now();
           this._welcomeFired    = false;           // ← reset: allow one welcome
-          this._motionWasOnAtDoor = this._hass.states[cfg.motion_sensor]?.state === 'on';
+          this._motionWasOnAtDoor = this._isActiveAlertState(this._hass.states[this._frontDoorMotionEntity()]?.state);
           alertMsg = this._rand(AM.door.on).replace('{c}', this._cn());
           alertTitle = 'Front door';
           alertPriority = 'attention';
@@ -2674,29 +2703,9 @@ class LiveDesk extends HTMLElement {
       }
     }
 
-    // ── Doorbell sensor (separate from a physical door contact) ──
-    if (cfg.doorbell_sensor) {
-      const s = this._hass.states[cfg.doorbell_sensor];
-      const cur = s?.state;
-      const prv = this._lastStates[cfg.doorbell_sensor];
-      const active = ['on', 'pressed', 'detected'].includes(String(cur).toLowerCase());
-      if (prv !== undefined && cur !== prv && active) {
-        alertMsg = this._rand(AM.doorbell.on).replace('{c}', this._cn()).replace('{n}', this._ownerName());
-        alertMs = 7000;
-        alertTitle = 'Front doorbell';
-        alertPriority = 'attention';
-        alertCamera = cfg.front_door_camera || '';
-      }
-    }
-
-    // ── Motion sensor ────────────────────────────────────────────
-    if (cfg.motion_sensor) {
-      const s   = this._hass.states[cfg.motion_sensor];
-      const cur = s?.state;
-      const prv = this._lastStates[cfg.motion_sensor];
-      if (prv !== undefined && cur !== prv) {
-        const on = cur === 'on';
-        if (on) {
+    // ── Front-door motion (event entity or binary sensor) ───────
+    const frontMotionEntity = this._frontDoorMotionEntity();
+    if (this._entityTriggered(frontMotionEntity)) {
           const now        = Date.now();
           const doorAge    = this._doorOpenedAt ? (now - this._doorOpenedAt) : Infinity;
           // Welcome window: wait ≥5 s (sensor delay buffer) AND within 15 s of door open
@@ -2722,10 +2731,26 @@ class LiveDesk extends HTMLElement {
             alertCamera = cfg.front_door_camera || cfg.car_camera || '';
           }
           // else: inside door window but too early or already fired → silent
-        } else {
-          alertMsg = this._rand(AM.motion.off).replace('{c}', this._cn());
-        }
-      }
+    }
+
+    // ── Car-view motion (normally supplied by ONVIF) ────────────
+    const carMotionEntity = this._carMotionEntity();
+    if (this._entityTriggered(carMotionEntity)) {
+      alertMsg = `${this._cn()} detected movement near the cars.`;
+      alertMs = 6000;
+      alertTitle = 'Car-view motion';
+      alertPriority = 'activity';
+      alertCamera = cfg.car_camera || '';
+    }
+
+    // Doorbell is processed after motion so it wins if Ring reports both at once.
+    const doorbellEntity = this._doorbellEntity();
+    if (this._entityTriggered(doorbellEntity)) {
+      alertMsg = this._rand(AM.doorbell.on).replace('{c}', this._cn()).replace('{n}', this._ownerName());
+      alertMs = 7000;
+      alertTitle = 'Front doorbell';
+      alertPriority = 'attention';
+      alertCamera = cfg.front_door_camera || '';
     }
 
     if (cfg.smoke_sensor) {
@@ -2766,9 +2791,17 @@ class LiveDesk extends HTMLElement {
   _changed(id, val) { return this._lastStates[id] !== val; }
   _saveStates() {
     if (!this._hass) return;
-    ['temp_sensor','humid_sensor','weather_entity','motion_sensor','door_sensor','doorbell_sensor','smoke_sensor']
-      .forEach(k => {
-        const id = this._config[k];
+    const trackedEntities = new Set([
+      this._config.temp_sensor,
+      this._config.humid_sensor,
+      this._config.weather_entity,
+      this._frontDoorMotionEntity(),
+      this._carMotionEntity(),
+      this._config.door_sensor,
+      this._doorbellEntity(),
+      this._config.smoke_sensor,
+    ].filter(Boolean));
+    trackedEntities.forEach(id => {
         if (id && this._hass.states[id]) this._lastStates[id] = this._hass.states[id].state;
       });
   }
@@ -3467,7 +3500,10 @@ class LiveDeskEditor extends HTMLElement {
         const domain = p.dataset.domain;
         if (domain) p.includeDomains = [domain];
         const key = p.dataset.key;
-        const saved = this._config[key] || '';
+        let saved = this._config[key] || '';
+        if (!saved && key === 'front_door_motion_entity') saved = this._config.motion_sensor || '';
+        if (!saved && key === 'car_motion_entity') saved = this._config.car_motion_sensor || '';
+        if (!saved && key === 'doorbell_entity') saved = this._config.doorbell_sensor || '';
         if (saved && p.value !== saved) { p.value = saved; p.setAttribute('value', saved); }
       });
       // entities array pickers
@@ -3569,7 +3605,7 @@ class LiveDeskEditor extends HTMLElement {
 
     <!-- HEADER -->
     <div style="text-align:center;padding:12px 14px 4px;font-size:11px;color:var(--secondary-text-color);line-height:1.7;">
-      ◈ <strong style="color:var(--primary-color)">Coco LiveDesk v1.2.0</strong> — Home Assistant companion<br/>
+      ◈ <strong style="color:var(--primary-color)">Coco LiveDesk v1.2.1</strong> — Home Assistant companion<br/>
       Based on LiveDesk by <strong style="color:var(--primary-color)">@doanlong1412</strong>
     </div>
 
@@ -3697,8 +3733,8 @@ class LiveDeskEditor extends HTMLElement {
     <div class="acc-wrap">
       <div class="acc-head" id="head-alerts">
         <span>${t('secAlerts')}
-          ${[cfg.motion_sensor, cfg.door_sensor, cfg.doorbell_sensor, cfg.smoke_sensor].filter(Boolean).length > 0
-            ? `<span class="badge">${[cfg.motion_sensor, cfg.door_sensor, cfg.doorbell_sensor, cfg.smoke_sensor].filter(Boolean).length}/4</span>`
+          ${[cfg.front_door_motion_entity || cfg.motion_sensor, cfg.car_motion_entity || cfg.car_motion_sensor, cfg.door_sensor, cfg.doorbell_entity || cfg.doorbell_sensor, cfg.smoke_sensor].filter(Boolean).length > 0
+            ? `<span class="badge">${[cfg.front_door_motion_entity || cfg.motion_sensor, cfg.car_motion_entity || cfg.car_motion_sensor, cfg.door_sensor, cfg.doorbell_entity || cfg.doorbell_sensor, cfg.smoke_sensor].filter(Boolean).length}/5</span>`
             : ''}
         </span>
         <span class="acc-arrow" id="arrow-alerts">${this._open.alerts ? '▾' : '▸'}</span>
@@ -3718,17 +3754,23 @@ class LiveDeskEditor extends HTMLElement {
         </div>
 
         <div class="row">
-          <label>${t('lblMotionSensor')}</label>
-          <ha-entity-picker data-key="motion_sensor" data-domain="binary_sensor" allow-custom-entity></ha-entity-picker>
+          <label>🚶 Front-door motion entity</label>
+          <ha-entity-picker data-key="front_door_motion_entity" allow-custom-entity></ha-entity-picker>
+          <div class="hint">Use a Ring event entity or a motion binary sensor.</div>
+        </div>
+        <div class="row">
+          <label>🚗 Car-view motion entity</label>
+          <ha-entity-picker data-key="car_motion_entity" allow-custom-entity></ha-entity-picker>
+          <div class="hint">An ONVIF motion or person sensor can be used here.</div>
         </div>
         <div class="row">
           <label>${t('lblDoorSensor')}</label>
           <ha-entity-picker data-key="door_sensor" data-domain="binary_sensor" allow-custom-entity></ha-entity-picker>
         </div>
         <div class="row">
-          <label>🔔 Doorbell / ding sensor</label>
-          <ha-entity-picker data-key="doorbell_sensor" data-domain="binary_sensor" allow-custom-entity></ha-entity-picker>
-          <div class="hint">This is separate from the physical open/closed door sensor.</div>
+          <label>🔔 Doorbell / ding entity</label>
+          <ha-entity-picker data-key="doorbell_entity" allow-custom-entity></ha-entity-picker>
+          <div class="hint">Use the Ring ding event or a binary sensor. This is separate from the physical door sensor.</div>
         </div>
         <div class="row">
           <label>${t('lblSmokeSensor')}</label>
