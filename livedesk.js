@@ -1,5 +1,5 @@
 /**
- * livedesk.js  v1.2.1-coco
+ * livedesk.js  v1.2.2-coco
  * Config YAML:
  *   type: custom:live-desk
  *   name: Anh Long          # tên hiển thị trong lời chào
@@ -573,14 +573,15 @@ function detectDevice(entityId, hass, lang) {
 }
 
 // ─── iframe HTML cho Live2D ───────────────────────────────────
-function makeL2dHtml(modelPath, w, h, vOffset, scale) {
+function makeL2dHtml(modelPath, w, h, vOffset, scale, background) {
   vOffset = vOffset || 0;
   scale   = scale   || 1;
+  background = /^#[0-9a-f]{3,8}$/i.test(String(background || '')) ? background : '#15191c';
   return `<!DOCTYPE html><html><head><meta charset="utf-8">
 <style>
 *{margin:0;padding:0}
-html,body{width:${w}px;height:${h}px;overflow:hidden;background:transparent;}
-canvas{display:block;position:absolute;top:0;left:0;}
+html,body{width:${w}px;height:${h}px;overflow:hidden;background:${background};}
+canvas{display:block;position:absolute;top:0;left:0;background:${background};}
 </style>
 </head><body>
 <canvas id="live2d" width="${w}" height="${h}"></canvas>
@@ -815,7 +816,7 @@ const CARD_TEMPLATE = `
     border:1px solid var(--divider-color,rgba(255,255,255,.12));
     border-radius:14px;overflow:hidden;
   }
-  .nep-card.is-fullscreen .waifu-area{flex:1;min-height:500px;}
+  .nep-card.is-fullscreen .waifu-area{flex:1;min-height:500px;background:#15191c;}
   .nep-card.is-fullscreen .nep-toolbar{background:rgba(0,0,0,.18);}
   .nep-card.is-fullscreen .coco-dashboard{
     display:grid;grid-template-rows:auto auto minmax(150px,1fr);gap:12px;min-width:0;
@@ -1022,7 +1023,7 @@ const CARD_TEMPLATE = `
   }
 
   /* iframe — full card width */
-  #nep-l2d-frame{border:none;background:transparent;display:block;z-index:2;width:100%!important;}
+  #nep-l2d-frame{border:none;background:#15191c;display:block;z-index:2;width:100%!important;}
 
   /* Toolbar — single row, compact glass */
   .nep-toolbar{
@@ -1222,6 +1223,7 @@ class LiveDesk extends HTMLElement {
     })();
     this._clockInterval = null;
     this._cameraRefreshTimer = null;
+    this._wasDisconnected = false;
   }
 
   setConfig(config) { this._config = { ...config, lang: 'en' }; this._render(); }
@@ -1277,7 +1279,9 @@ class LiveDesk extends HTMLElement {
     frame.setAttribute('width', w);
     frame.setAttribute('height', h);
     // Start with natural size; auto-clip fires after model renders via postMessage
-    frame.style.cssText = 'width:100%;height:' + h + 'px;border:none;background:transparent;display:block;z-index:2;transition:margin-top 0.3s ease;';
+    const modelBackground = /^#[0-9a-f]{3,8}$/i.test(String(this._config.model_background || ''))
+      ? this._config.model_background : '#15191c';
+    frame.style.cssText = 'width:100%;height:' + h + 'px;border:none;background:' + modelBackground + ';display:block;z-index:2;transition:margin-top 0.3s ease;';
     this._loadIntoFrame(frame, this._modelIdx, w, h, false);
     this._bindDashboard();
     this._updateDashboard(true);
@@ -1346,25 +1350,24 @@ class LiveDesk extends HTMLElement {
     // fix: restore pinned state after reload
     try { if (localStorage.getItem('nep_pinned') === '1') setTimeout(() => this._enterPin(), 600); } catch(e){}
 
-    // Listen for auto-clip message from iframe canvas detection
-    if (!this._msgListener) {
-      this._msgListener = (e) => {
-        if (!e.data || e.data.type !== 'nepClip') return;
-        const {top, bottom, canvasH} = e.data;
-        const fr = this._shadow.getElementById('nep-l2d-frame');
-        if (!fr) return;
-        const cardH = this._config.height || 440;
-        // Clip top blank space; expand height to keep character full size
-        const extra = Math.round(top * 0.92);
-        const newH  = canvasH + extra;
-        fr.setAttribute('height', newH);
-        fr.style.height     = newH + 'px';
-        fr.style.marginTop  = '-' + extra + 'px';
-        // Also adjust bubble position: head is at ~top/canvasH from the top of original canvas
-        // After clip, head appears near top of visible area → bubble stays at 65%
-      };
-      window.addEventListener('message', this._msgListener);
-    }
+    this._ensureMessageListener();
+  }
+
+  _ensureMessageListener() {
+    if (this._msgListener) return;
+    this._msgListener = (e) => {
+      if (!e.data || e.data.type !== 'nepClip') return;
+      const {top, canvasH} = e.data;
+      const fr = this._shadow.getElementById('nep-l2d-frame');
+      if (!fr) return;
+      // Clip top blank space; expand height to keep character full size.
+      const extra = Math.round(top * 0.92);
+      const newH  = canvasH + extra;
+      fr.setAttribute('height', newH);
+      fr.style.height    = newH + 'px';
+      fr.style.marginTop = '-' + extra + 'px';
+    };
+    window.addEventListener('message', this._msgListener);
   }
 
   _cocoConfig() {
@@ -1604,7 +1607,7 @@ class LiveDesk extends HTMLElement {
     const lbl = this._shadow.getElementById('modelLabel');
     if (lbl) lbl.textContent = m.name;
 
-    const html = makeL2dHtml(m.path, w, h, m.vOffset, m.scale);
+    const html = makeL2dHtml(m.path, w, h, m.vOffset, m.scale, this._config.model_background);
     const blob = new Blob([html], {type:'text/html'});
     const url  = URL.createObjectURL(blob);
 
@@ -3329,6 +3332,29 @@ class LiveDesk extends HTMLElement {
 
   // fix: when card is re-attached to DOM (navigating back to dashboard) → re-inject overlay
   connectedCallback() {
+    // Home Assistant detaches cards when changing dashboard views. Blob-backed
+    // model documents do not always survive that trip, so restore the runtime
+    // and character when this existing card instance is attached again.
+    const frame = this._shadow?.getElementById('nep-l2d-frame');
+    if (this._wasDisconnected && frame && Object.keys(this._config || {}).length) {
+      setTimeout(() => {
+        const isFullscreen = this._config.layout === 'fullscreen';
+        const h = isFullscreen ? Math.max(Number(this._config.height) || 620, 520) : (this._config.height || 440);
+        const w = isFullscreen ? Math.max(Number(this._config.width) || 520, 420) : (this._config.width || 400);
+        this._ensureMessageListener();
+        this._loadIntoFrame(frame, this._modelIdx, w, h, false);
+        this._bindDashboard();
+        this._startStatusRotation();
+        if (!this._idleInterval) this._idleInterval = setInterval(() => this._idleQuote(), 45000);
+        if (this._hass) {
+          // Establish a fresh baseline so returning does not speak a stale
+          // frontend event that happened while the Coco card was detached.
+          this._saveStates();
+          this._updateDashboard(true);
+        }
+      }, 100);
+    }
+    this._wasDisconnected = false;
     if (this._floating) {
       setTimeout(() => this._rebuildFloat(), 300);
     }
@@ -3430,6 +3456,7 @@ class LiveDesk extends HTMLElement {
   // fix: clean up when card is removed from DOM (navigating away from dashboard)
   // KEEP this._floating intact so connectedCallback knows to rebuild
   disconnectedCallback() {
+    this._wasDisconnected = true;
     this._stopAudio();
     if (this._msgListener) {
       window.removeEventListener('message', this._msgListener);
@@ -3497,14 +3524,17 @@ class LiveDeskEditor extends HTMLElement {
     const apply = () => {
       this.shadowRoot.querySelectorAll('ha-entity-picker[data-key]').forEach(p => {
         p.hass = this._hass;
-        const domain = p.dataset.domain;
-        if (domain) p.includeDomains = [domain];
+        const domains = (p.dataset.domains || p.dataset.domain || '')
+          .split(',').map(v => v.trim()).filter(Boolean);
+        if (domains.length) p.includeDomains = domains;
         const key = p.dataset.key;
         let saved = this._config[key] || '';
         if (!saved && key === 'front_door_motion_entity') saved = this._config.motion_sensor || '';
         if (!saved && key === 'car_motion_entity') saved = this._config.car_motion_sensor || '';
         if (!saved && key === 'doorbell_entity') saved = this._config.doorbell_sensor || '';
-        if (saved && p.value !== saved) { p.value = saved; p.setAttribute('value', saved); }
+        if (p.value !== saved) p.value = saved;
+        if (saved) p.setAttribute('value', saved);
+        else p.removeAttribute('value');
       });
       // entities array pickers
       this.shadowRoot.querySelectorAll('ha-entity-picker[data-ei]').forEach(p => {
@@ -3517,6 +3547,11 @@ class LiveDeskEditor extends HTMLElement {
     };
     apply();
     requestAnimationFrame(() => requestAnimationFrame(apply));
+    customElements.whenDefined('ha-entity-picker').then(() => {
+      apply();
+      setTimeout(apply, 100);
+      setTimeout(apply, 400);
+    });
   }
 
   // ── char nickname used in dialogue ──────────────────────────
@@ -3605,7 +3640,7 @@ class LiveDeskEditor extends HTMLElement {
 
     <!-- HEADER -->
     <div style="text-align:center;padding:12px 14px 4px;font-size:11px;color:var(--secondary-text-color);line-height:1.7;">
-      ◈ <strong style="color:var(--primary-color)">Coco LiveDesk v1.2.1</strong> — Home Assistant companion<br/>
+      ◈ <strong style="color:var(--primary-color)">Coco LiveDesk v1.2.2</strong> — Home Assistant companion<br/>
       Based on LiveDesk by <strong style="color:var(--primary-color)">@doanlong1412</strong>
     </div>
 
@@ -3755,12 +3790,12 @@ class LiveDeskEditor extends HTMLElement {
 
         <div class="row">
           <label>🚶 Front-door motion entity</label>
-          <ha-entity-picker data-key="front_door_motion_entity" allow-custom-entity></ha-entity-picker>
+          <ha-entity-picker data-key="front_door_motion_entity" data-domains="event,binary_sensor" allow-custom-entity></ha-entity-picker>
           <div class="hint">Use a Ring event entity or a motion binary sensor.</div>
         </div>
         <div class="row">
           <label>🚗 Car-view motion entity</label>
-          <ha-entity-picker data-key="car_motion_entity" allow-custom-entity></ha-entity-picker>
+          <ha-entity-picker data-key="car_motion_entity" data-domains="binary_sensor,event" allow-custom-entity></ha-entity-picker>
           <div class="hint">An ONVIF motion or person sensor can be used here.</div>
         </div>
         <div class="row">
@@ -3769,7 +3804,7 @@ class LiveDeskEditor extends HTMLElement {
         </div>
         <div class="row">
           <label>🔔 Doorbell / ding entity</label>
-          <ha-entity-picker data-key="doorbell_entity" allow-custom-entity></ha-entity-picker>
+          <ha-entity-picker data-key="doorbell_entity" data-domains="event,binary_sensor" allow-custom-entity></ha-entity-picker>
           <div class="hint">Use the Ring ding event or a binary sensor. This is separate from the physical door sensor.</div>
         </div>
         <div class="row">

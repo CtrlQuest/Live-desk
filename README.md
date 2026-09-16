@@ -106,6 +106,7 @@ coco:
 | `float_height` | `650` | Floating character height |
 | `float_width` | `400` | Floating character width |
 | `card_blur` | `0` | Original card background blur from 0 to 30 |
+| `model_background` | `#15191c` | Background colour behind every Live2D model (hex) |
 | `temp_sensor` | none | Temperature sensor |
 | `humid_sensor` | none | Humidity sensor |
 | `weather_entity` | none | Weather entity |

@@ -1,3 +1,10 @@
+# v1.2.2-coco
+
+- Replaced the bright white Live2D iframe background with a dark background matching the Coco dashboard.
+- Added optional `model_background` hex colour configuration.
+- Reloads the Live2D model and dashboard timers when returning to the Coco view.
+- Improved visual-editor restoration and filtering for Ring event entities and ONVIF motion sensors.
+
 # v1.2.1-coco
 
 - Added Home Assistant `event.*` support for Ring motion and doorbell events.
