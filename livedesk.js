@@ -1,5 +1,5 @@
 /**
- * livedesk.js  v1.2.3-coco
+ * livedesk.js  v1.2.4-coco
  * Config YAML:
  *   type: custom:live-desk
  *   name: Anh Long          # tên hiển thị trong lời chào
@@ -424,7 +424,7 @@ const ALERT_MSGS_EN = {
     off:['Door closed, all safe now~ 🔒','Door closed! {c} feels relieved~']
   },
   doorbell:{
-    on:['Someone rang the front doorbell. 🔔','Ben, someone is at the front door. 🔔']
+    on:['Someone rang the front doorbell. 🔔','{n}, someone is at the front door. 🔔']
   },
   smoke:{
     on:['⚠️ SMOKE DETECTED! Check immediately! 🔥🚨','🚨 SMOKE ALERT! Evacuate now, don\'t hesitate!',
@@ -580,8 +580,9 @@ function makeL2dHtml(modelPath, w, h, vOffset, scale, background) {
   return `<!DOCTYPE html><html><head><meta charset="utf-8">
 <style>
 *{margin:0;padding:0}
-html,body{width:${w}px;height:${h}px;overflow:hidden;background:${background};}
-canvas{display:block;position:absolute;top:0;left:0;background:transparent!important;}
+html,body{width:100%;height:100%;overflow:hidden;background:${background};}
+body{position:relative;}
+canvas{display:block;position:absolute;top:0;left:50%!important;transform:translateX(-50%)!important;background:transparent!important;}
 </style>
 </head><body>
 <canvas id="live2d" width="${w}" height="${h}"></canvas>
@@ -672,25 +673,27 @@ const FLOAT_CSS = `
   border:1px solid rgba(255,255,255,0.4);border-radius:10px;font-size:12px;color:#fff;
   line-height:1.5;box-shadow:0 4px 20px rgba(0,0,0,0.25);opacity:0;transition:opacity 0.35s;word-break:break-word;text-shadow:0 1px 3px rgba(0,0,0,0.4);}
 #_nep_float_bubble.show{opacity:1;}
-#nep-float-controls{pointer-events:all;display:flex;gap:5px;margin-bottom:4px;margin-right:8px;}
+#nep-float-controls{pointer-events:all;position:fixed;top:70px;right:12px;z-index:2147483647;display:flex;gap:6px;}
 .nep-fbtn{background:rgba(255,255,255,0.15);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.35);
   border-radius:20px;padding:4px 11px;color:#fff;font-size:11px;cursor:pointer;
   box-shadow:0 2px 8px rgba(0,0,0,0.2),inset 0 1px 0 rgba(255,255,255,0.3);
   transition:all 0.2s;font-family:'Segoe UI',sans-serif;font-weight:500;}
 .nep-fbtn:hover{background:rgba(255,255,255,0.28);transform:translateY(-1px);}
 .nep-fbtn.restore{border-color:rgba(120,220,120,0.5);color:#afffaf;}
+.nep-fbtn.close{min-width:34px;border-color:rgba(248,113,113,.75);background:rgba(90,18,25,.88);color:#fff;font-size:16px;line-height:1;}
 #nep-float-char{pointer-events:all;cursor:pointer;filter:drop-shadow(0 8px 24px rgba(106,76,156,0.5));transition:transform 0.25s;position:relative;}
 #nep-float-char:hover{transform:scale(1.05) translateY(-6px);}
 #nep-float-char iframe{border:none;background:transparent;display:block;pointer-events:none;}
 /* Pinned overlay — compact, always on top of dashboard */
 #nep-pin-overlay{position:fixed;bottom:0;right:16px;z-index:2147483646;display:flex;flex-direction:column;align-items:flex-end;pointer-events:none;}
-#nep-pin-controls{pointer-events:all;display:flex;gap:5px;margin-bottom:4px;margin-right:8px;}
+#nep-pin-controls{pointer-events:all;position:fixed;top:112px;right:12px;z-index:2147483647;display:flex;gap:6px;}
 .nep-pin-btn{background:rgba(255,255,255,0.15);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.35);
   border-radius:20px;padding:4px 11px;color:#fff;font-size:11px;cursor:pointer;
   box-shadow:0 2px 8px rgba(0,0,0,0.2),inset 0 1px 0 rgba(255,255,255,0.3);
   transition:all 0.2s;font-family:'Segoe UI',sans-serif;font-weight:500;}
 .nep-pin-btn:hover{background:rgba(255,255,255,0.28);transform:translateY(-1px);}
 .nep-pin-btn.unpin{border-color:rgba(255,180,80,0.6);color:#ffe0a0;}
+.nep-pin-btn.close{min-width:34px;border-color:rgba(248,113,113,.75);background:rgba(90,18,25,.88);color:#fff;font-size:16px;line-height:1;}
 #nep-pin-char{pointer-events:all;cursor:pointer;filter:drop-shadow(0 8px 24px rgba(106,76,156,0.5));transition:transform 0.25s;position:relative;}
 #nep-pin-char:hover{transform:scale(1.05) translateY(-6px);}
 #nep-pin-char iframe{border:none;background:transparent;display:block;pointer-events:none;}
@@ -1138,7 +1141,7 @@ const CARD_TEMPLATE = `
   </div>
   <div class="nep-card-inner">
   <header class="coco-header">
-    <div class="coco-brand"><div class="coco-brand-mark">◈</div><div><div class="coco-title">Coco Home</div><div class="coco-subtitle" id="coco-subtitle">Home Assistant companion</div></div></div>
+    <div class="coco-brand"><div class="coco-brand-mark">◈</div><div><div class="coco-title" id="assistant-home-title">Assistant Home</div><div class="coco-subtitle" id="coco-subtitle">Home Assistant companion</div></div></div>
     <div class="coco-clock" id="coco-clock">--:--<div class="coco-date" id="coco-date"></div></div>
   </header>
   <section class="coco-character-panel">
@@ -1157,8 +1160,8 @@ const CARD_TEMPLATE = `
   </section>
   <main class="coco-dashboard">
     <section class="coco-panel">
-      <div class="coco-panel-title"><span>Coco status</span><span class="coco-priority" id="coco-priority">Normal</span></div>
-      <div class="coco-message" id="coco-message">Coco is getting the house status ready…</div>
+      <div class="coco-panel-title"><span id="assistant-status-title">Assistant status</span><span class="coco-priority" id="coco-priority">Normal</span></div>
+      <div class="coco-message" id="coco-message">Getting the house status ready…</div>
       <div class="coco-facts">
         <div class="coco-fact"><div class="coco-fact-label">Security</div><div class="coco-fact-value" id="coco-security">Checking…</div></div>
         <div class="coco-fact"><div class="coco-fact-label">Weather</div><div class="coco-fact-value" id="coco-weather">—</div></div>
@@ -1317,9 +1320,11 @@ class LiveDesk extends HTMLElement {
       this._togglePin();
       btnPin.classList.toggle('active', this._pinned);
     };
-    // Restore pin state on render (visual feedback)
-    try { if (localStorage.getItem('nep_pinned') === '1') {
+    // Restore pin state on render only when persistence was explicitly enabled.
+    try { if (this._config.remember_pinned === true && localStorage.getItem('nep_pinned') === '1') {
       btnPin.classList.add('active');
+    } else if (this._config.remember_pinned !== true) {
+      localStorage.removeItem('nep_pinned');
     }} catch(e){}
     // 🔊 Button: toggle audio on/off
     const btnSound = this._shadow.getElementById('btnSound');
@@ -1345,10 +1350,23 @@ class LiveDesk extends HTMLElement {
     this._idleInterval = setInterval(() => this._idleQuote(), 45000);
     this._startStatusRotation();
     setTimeout(() => this._greet(), 3000);
-    // fix: restore mini/float state after reload — runs before greet so overlay is ready
-    try { if (localStorage.getItem('nep_floating') === '1') setTimeout(() => this._enterFloating(), 500); } catch(e){}
-    // fix: restore pinned state after reload
-    try { if (localStorage.getItem('nep_pinned') === '1') setTimeout(() => this._enterPin(), 600); } catch(e){}
+    // Floating mode is session-only by default. Persist it only when explicitly
+    // requested, otherwise tablets can become trapped in an auto-opened overlay.
+    try {
+      if (this._config.remember_floating === true && localStorage.getItem('nep_floating') === '1') {
+        setTimeout(() => this._enterFloating(), 500);
+      } else if (this._config.remember_floating !== true) {
+        localStorage.removeItem('nep_floating');
+      }
+    } catch(e){}
+    // Pinned mode is also session-only by default on wall tablets.
+    try {
+      if (this._config.remember_pinned === true && localStorage.getItem('nep_pinned') === '1') {
+        setTimeout(() => this._enterPin(), 600);
+      } else if (this._config.remember_pinned !== true) {
+        localStorage.removeItem('nep_pinned');
+      }
+    } catch(e){}
 
     this._ensureMessageListener();
   }
@@ -1553,16 +1571,17 @@ class LiveDesk extends HTMLElement {
   _updateDashboard(forceCamera = false) {
     if (!this._shadow) return;
     const coco = this._cocoConfig();
+    const assistantName = this._cn();
     const messageState = this._cleanState(coco.message_entity);
     const priorityState = this._cleanState(coco.priority_entity);
     const eventState = this._cleanState(coco.event_entity);
-    const message = messageState?.state || this._currentMessage || this._statusMsgs[this._statusIdx] || 'Everything is quiet. Coco is watching the house.';
+    const message = messageState?.state || this._currentMessage || this._statusMsgs[this._statusIdx] || `Everything is quiet. ${assistantName} is watching the house.`;
     const priority = this._normalisePriority(priorityState?.state || 'normal');
 
     if (messageState) {
       const previous = this._lastStates[coco.message_entity];
       if (previous !== undefined && previous !== messageState.state) {
-        const title = eventState?.state || messageState.attributes?.friendly_name || 'Coco update';
+        const title = eventState?.state || messageState.attributes?.friendly_name || `${assistantName} update`;
         this._recordEvent(title, messageState.state, priority);
         this._pushStatus(messageState.state, true);
       }
@@ -1595,7 +1614,11 @@ class LiveDesk extends HTMLElement {
     const humidEl = this._shadow.getElementById('coco-humidity');
     if (humidEl) humidEl.textContent = this._formatEntity(this._config.humid_sensor);
     const subtitle = this._shadow.getElementById('coco-subtitle');
-    if (subtitle) subtitle.textContent = `${this._cn()} is connected to Home Assistant`;
+    if (subtitle) subtitle.textContent = `${assistantName} is connected to Home Assistant`;
+    const homeTitle = this._shadow.getElementById('assistant-home-title');
+    if (homeTitle) homeTitle.textContent = `${assistantName} Home`;
+    const statusTitle = this._shadow.getElementById('assistant-status-title');
+    if (statusTitle) statusTitle.textContent = `${assistantName} status`;
 
     this._renderEventHistory();
     this._updateCameraViews(forceCamera);
@@ -2533,7 +2556,10 @@ class LiveDesk extends HTMLElement {
   _enterFloating() {
     if (this._floating) return;
     this._floating = true;
-    try { localStorage.setItem('nep_floating', '1'); } catch(e){}
+    try {
+      if (this._config.remember_floating === true) localStorage.setItem('nep_floating', '1');
+      else localStorage.removeItem('nep_floating');
+    } catch(e){}
     this._shadow.querySelector('.nep-card').style.display = 'none';
 
     const fh = this._config.float_height || 650;
@@ -2555,6 +2581,7 @@ class LiveDesk extends HTMLElement {
         <button class="nep-fbtn" id="_nep_fbtn_switchnext">▶</button>
         <button class="nep-fbtn" id="_nep_fbtn_quote">💬</button>
         <button class="nep-fbtn restore" id="_nep_fbtn_restore">${_t(this._config, 'floatRestore')}</button>
+        <button class="nep-fbtn close" id="_nep_fbtn_close" title="Close floating view" aria-label="Close floating view">✕</button>
       </div>
       <div id="nep-float-char">
         <div id="_nep_float_chat"><div id="_nep_float_chat_inner"></div></div>
@@ -2569,6 +2596,7 @@ class LiveDesk extends HTMLElement {
     this._loadIntoFrame(ff, this._modelIdx, fw, fh, true);
 
     document.getElementById('_nep_fbtn_restore').onclick = () => this._exitFloating();
+    document.getElementById('_nep_fbtn_close').onclick = () => this._exitFloating();
     document.getElementById('_nep_fbtn_switchprev').onclick = () => this._switchModelPrev();
     document.getElementById('_nep_fbtn_switchnext').onclick = () => this._switchModel();
     document.getElementById('_nep_fbtn_quote').onclick   = () => {
@@ -2639,8 +2667,10 @@ class LiveDesk extends HTMLElement {
     this._floatChatIdx  = 0;
     this._shadow.querySelector('.nep-card').style.display = '';
     const frame = this._shadow.getElementById('nep-l2d-frame');
-    const h = this._config.height || 440;
-    this._loadIntoFrame(frame, this._modelIdx, 400, h, false);
+    const isFullscreen = this._config.layout === 'fullscreen';
+    const h = isFullscreen ? Math.max(Number(this._config.height) || 620, 520) : (this._config.height || 440);
+    const w = isFullscreen ? Math.max(Number(this._config.width) || 520, 420) : (this._config.width || 400);
+    this._loadIntoFrame(frame, this._modelIdx, w, h, false);
     this._pushStatus(_t(this._config, 'returnMsg', this._cn()), true);
   }
 
@@ -3214,7 +3244,10 @@ class LiveDesk extends HTMLElement {
   _enterPin() {
     if (this._pinned) return;
     this._pinned = true;
-    try { localStorage.setItem('nep_pinned', '1'); } catch(e){}
+    try {
+      if (this._config.remember_pinned === true) localStorage.setItem('nep_pinned', '1');
+      else localStorage.removeItem('nep_pinned');
+    } catch(e){}
     // Update button in card
     const btn = this._shadow.getElementById('btnPin');
     if (btn) { btn.textContent = _t(this._config, 'pinActive'); btn.classList.add('green'); }
@@ -3271,6 +3304,7 @@ class LiveDesk extends HTMLElement {
         <button class="nep-pin-btn" id="_nep_pbtn_switchprev">◀</button>
         <button class="nep-pin-btn" id="_nep_pbtn_switchnext">▶</button>
         <button class="nep-pin-btn unpin" id="_nep_pbtn_unpin">${_t(this._config, 'pinActive')}</button>
+        <button class="nep-pin-btn close" id="_nep_pbtn_close" title="Close pinned view" aria-label="Close pinned view">✕</button>
       </div>
       <div id="nep-pin-char">
         <div id="_nep_pin_chat"><div id="_nep_pin_chat_inner"></div></div>
@@ -3285,6 +3319,7 @@ class LiveDesk extends HTMLElement {
     this._loadIntoFrame(ff, this._modelIdx, fw, fh, true);
 
     document.getElementById('_nep_pbtn_unpin').onclick  = () => this._exitPin();
+    document.getElementById('_nep_pbtn_close').onclick = () => this._exitPin();
     document.getElementById('_nep_pbtn_switchprev').onclick = () => this._switchModelPrev();
     document.getElementById('_nep_pbtn_switchnext').onclick = () => this._switchModel();
 
@@ -3399,6 +3434,7 @@ class LiveDesk extends HTMLElement {
         <button class="nep-fbtn" id="_nep_fbtn_switchnext">▶</button>
         <button class="nep-fbtn" id="_nep_fbtn_quote">💬</button>
         <button class="nep-fbtn restore" id="_nep_fbtn_restore">${_t(this._config, 'floatRestore')}</button>
+        <button class="nep-fbtn close" id="_nep_fbtn_close" title="Close floating view" aria-label="Close floating view">✕</button>
       </div>
       <div id="nep-float-char">
         <div id="_nep_float_chat"><div id="_nep_float_chat_inner"></div></div>
@@ -3411,6 +3447,7 @@ class LiveDesk extends HTMLElement {
     const ff = document.getElementById('_nep_float_frame');
     this._loadIntoFrame(ff, this._modelIdx, fw, fh, true);
     document.getElementById('_nep_fbtn_restore').onclick = () => this._exitFloating();
+    document.getElementById('_nep_fbtn_close').onclick = () => this._exitFloating();
     document.getElementById('_nep_fbtn_switchprev').onclick = () => this._switchModelPrev();
     document.getElementById('_nep_fbtn_switchnext').onclick = () => this._switchModel();
     document.getElementById('_nep_fbtn_quote').onclick   = () => {
@@ -3640,14 +3677,14 @@ class LiveDeskEditor extends HTMLElement {
 
     <!-- HEADER -->
     <div style="text-align:center;padding:12px 14px 4px;font-size:11px;color:var(--secondary-text-color);line-height:1.7;">
-      ◈ <strong style="color:var(--primary-color)">Coco LiveDesk v1.2.3</strong> — Home Assistant companion<br/>
+      ◈ <strong style="color:var(--primary-color)">LiveDesk v1.2.4</strong> — Home Assistant companion<br/>
       Based on LiveDesk by <strong style="color:var(--primary-color)">@doanlong1412</strong>
     </div>
 
-    <!-- ══ COCO DASHBOARD ══ -->
+    <!-- ══ ASSISTANT DASHBOARD ══ -->
     <div class="acc-wrap">
       <div class="acc-head" id="head-dashboard">
-        <span>◈ Coco Dashboard</span>
+        <span>◈ Assistant Dashboard</span>
         <span class="acc-arrow" id="arrow-dashboard">${this._open.dashboard ? '▾' : '▸'}</span>
       </div>
       <div class="acc-body" id="body-dashboard" style="display:${this._open.dashboard ? 'block' : 'none'}">
@@ -3663,8 +3700,8 @@ class LiveDeskEditor extends HTMLElement {
         <div class="row"><label>Car-view camera</label><ha-entity-picker data-key="car_camera" data-domain="camera" allow-custom-entity></ha-entity-picker></div>
         <div class="divider"></div>
         <div class="tag">AI result inputs (optional)</div>
-        <div class="hint" style="margin-bottom:10px">Home Assistant or Ollama can update these entities later. Coco will show the result and add it to Recent Events.</div>
-        <div class="row"><label>Latest Coco message entity</label><ha-entity-picker data-key="message_entity" allow-custom-entity></ha-entity-picker></div>
+        <div class="hint" style="margin-bottom:10px">Home Assistant or Ollama can update these entities later. Your named assistant will show the result and add it to Recent Events.</div>
+        <div class="row"><label>Latest assistant message entity</label><ha-entity-picker data-key="message_entity" allow-custom-entity></ha-entity-picker></div>
         <div class="row"><label>Priority entity</label><ha-entity-picker data-key="priority_entity" allow-custom-entity></ha-entity-picker></div>
         <div class="row"><label>Event title entity</label><ha-entity-picker data-key="event_entity" allow-custom-entity></ha-entity-picker></div>
       </div>
@@ -4186,7 +4223,7 @@ LiveDesk.getStubConfig = function() {
   return {
     type: 'custom:live-desk',
     name: '',
-    char_nickname: 'Coco',
+    char_nickname: '',
     layout: 'fullscreen',
     lang: 'en',
     temp_sensor:    'sensor.temperature',
@@ -4199,7 +4236,7 @@ LiveDesk.getStubConfig = function() {
 window.customCards = window.customCards || [];
 window.customCards.push({
   type: 'live-desk',
-  name: 'Coco LiveDesk',
-  description: 'English Live2D Home Assistant companion with fullscreen dashboard, cameras and events',
+  name: 'LiveDesk Fullscreen',
+  description: 'English Live2D Home Assistant companion with configurable names, fullscreen dashboard, cameras and events',
   preview: true,
 });

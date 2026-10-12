@@ -1,3 +1,11 @@
+# v1.2.4-coco
+
+- Uses `char_nickname` throughout the dashboard instead of hard-coding Coco.
+- Uses the configured owner `name` in alerts instead of hard-coding Ben.
+- Stops floating or pinned modes reopening automatically unless their `remember_*` option is explicitly configured.
+- Adds always-visible touch-friendly close buttons to both overlay modes.
+- Centres the Live2D canvas in the fullscreen character panel and restores the correct fullscreen dimensions after closing floating mode.
+
 # v1.2.3-coco
 
 - Restored the Live2D canvas transparency so character models render correctly over the new dark model background.

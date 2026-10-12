@@ -107,6 +107,8 @@ coco:
 | `float_width` | `400` | Floating character width |
 | `card_blur` | `0` | Original card background blur from 0 to 30 |
 | `model_background` | `#15191c` | Background colour behind every Live2D model (hex) |
+| `remember_floating` | `false` | Restore floating mode after a browser reload; disabled by default for wall tablets |
+| `remember_pinned` | `false` | Restore pinned mode after a browser reload; disabled by default for wall tablets |
 | `temp_sensor` | none | Temperature sensor |
 | `humid_sensor` | none | Humidity sensor |
 | `weather_entity` | none | Weather entity |
