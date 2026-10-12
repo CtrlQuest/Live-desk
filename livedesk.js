@@ -1,5 +1,5 @@
 /**
- * livedesk.js  v1.2.4-coco
+ * livedesk.js  v1.2.5-coco
  * Config YAML:
  *   type: custom:live-desk
  *   name: Anh Long          # tên hiển thị trong lời chào
@@ -786,6 +786,15 @@ const CARD_TEMPLATE = `
     box-shadow:none;
     overflow:hidden;
   }
+  .nep-card.is-fullscreen .nep-wbtn--hide{display:none;}
+  .nep-card-restore{
+    position:fixed;top:72px;right:16px;z-index:2147483645;
+    border:1px solid rgba(96,165,250,.7);border-radius:18px;
+    padding:7px 13px;background:rgba(17,24,39,.92);color:#fff;
+    box-shadow:0 5px 18px rgba(0,0,0,.3);font:600 12px 'Segoe UI',sans-serif;
+    cursor:pointer;
+  }
+  .nep-card-restore[hidden]{display:none!important;}
   .nep-card.is-fullscreen .nep-card-inner{
     display:grid;
     grid-template-columns:minmax(300px,.8fr) minmax(460px,1.35fr);
@@ -1183,6 +1192,7 @@ const CARD_TEMPLATE = `
   </main>
   </div>
 </div>
+<button class="nep-card-restore" id="btnRestoreCard" type="button" hidden>Show assistant</button>
 `;
 
 // ─── Custom Element ──────────────────────────────────────────
@@ -1339,9 +1349,23 @@ class LiveDesk extends HTMLElement {
         btnSound.classList.remove('red'); btnSound.classList.add('green');
       }
     };
-    this._shadow.getElementById('btnHide').onclick     = () => {
+    const btnHide = this._shadow.getElementById('btnHide');
+    const btnRestoreCard = this._shadow.getElementById('btnRestoreCard');
+    if (btnRestoreCard) btnRestoreCard.textContent = `Show ${this._cn()}`;
+    btnHide.onclick = () => {
+      // The fullscreen dashboard is the whole view, so hiding it would leave
+      // the user with no in-card way to bring it back.
+      if (isFullscreen) return;
       this._pushStatus(_t(this._config, 'hideMsg', this._cn()), true);
-      setTimeout(() => { this._shadow.querySelector('.nep-card').style.display='none'; }, 1500);
+      setTimeout(() => {
+        this._shadow.querySelector('.nep-card').style.display = 'none';
+        if (btnRestoreCard) btnRestoreCard.hidden = false;
+      }, 1500);
+    };
+    if (btnRestoreCard) btnRestoreCard.onclick = () => {
+      this._shadow.querySelector('.nep-card').style.display = '';
+      btnRestoreCard.hidden = true;
+      this._pushStatus(`${this._cn()} is back.`, true);
     };
 
     this._initGlobalHover();
@@ -3677,7 +3701,7 @@ class LiveDeskEditor extends HTMLElement {
 
     <!-- HEADER -->
     <div style="text-align:center;padding:12px 14px 4px;font-size:11px;color:var(--secondary-text-color);line-height:1.7;">
-      ◈ <strong style="color:var(--primary-color)">LiveDesk v1.2.4</strong> — Home Assistant companion<br/>
+      ◈ <strong style="color:var(--primary-color)">LiveDesk v1.2.5</strong> — Home Assistant companion<br/>
       Based on LiveDesk by <strong style="color:var(--primary-color)">@doanlong1412</strong>
     </div>
 

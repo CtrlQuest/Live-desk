@@ -1,3 +1,8 @@
+# v1.2.5-coco
+
+- Removes the inherited hide/close control from fullscreen mode so the complete dashboard cannot disappear.
+- Adds a visible restore button when the hide control is used in classic-card mode.
+
 # v1.2.4-coco
 
 - Uses `char_nickname` throughout the dashboard instead of hard-coding Coco.
